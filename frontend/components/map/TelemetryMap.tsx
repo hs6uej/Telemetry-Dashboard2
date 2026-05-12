@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useRef } from 'react'
 import type { Station } from '@/lib/types'
+import type Point from 'ol/geom/Point'
 
 interface Props {
   stations: Station[]
