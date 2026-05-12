@@ -5,7 +5,8 @@
       "WebSearch",
       "WebFetch(domain:watertele.egat.co.th)",
       "Bash(npm --version)",
-      "Bash(mkdir -p \"d:\\\\work-golamm\\\\backend\\\\src\\\\auth\\\\dto\" \"d:\\\\work-golamm\\\\backend\\\\src\\\\users\\\\dto\" \"d:\\\\work-golamm\\\\backend\\\\src\\\\stations\\\\dto\" \"d:\\\\work-golamm\\\\backend\\\\src\\\\readings\\\\dto\" \"d:\\\\work-golamm\\\\backend\\\\src\\\\entities\" \"d:\\\\work-golamm\\\\frontend\\\\app\\\\login\" \"d:\\\\work-golamm\\\\frontend\\\\app\\\\\\(dashboard\\)\" \"d:\\\\work-golamm\\\\frontend\\\\components\\\\map\" \"d:\\\\work-golamm\\\\frontend\\\\components\\\\stations\" \"d:\\\\work-golamm\\\\frontend\\\\components\\\\layout\" \"d:\\\\work-golamm\\\\frontend\\\\components\\\\ui\" \"d:\\\\work-golamm\\\\frontend\\\\lib\" \"d:\\\\work-golamm\\\\db\")"
+      "Bash(mkdir -p \"d:\\\\work-golamm\\\\backend\\\\src\\\\auth\\\\dto\" \"d:\\\\work-golamm\\\\backend\\\\src\\\\users\\\\dto\" \"d:\\\\work-golamm\\\\backend\\\\src\\\\stations\\\\dto\" \"d:\\\\work-golamm\\\\backend\\\\src\\\\readings\\\\dto\" \"d:\\\\work-golamm\\\\backend\\\\src\\\\entities\" \"d:\\\\work-golamm\\\\frontend\\\\app\\\\login\" \"d:\\\\work-golamm\\\\frontend\\\\app\\\\\\(dashboard\\)\" \"d:\\\\work-golamm\\\\frontend\\\\components\\\\map\" \"d:\\\\work-golamm\\\\frontend\\\\components\\\\stations\" \"d:\\\\work-golamm\\\\frontend\\\\components\\\\layout\" \"d:\\\\work-golamm\\\\frontend\\\\components\\\\ui\" \"d:\\\\work-golamm\\\\frontend\\\\lib\" \"d:\\\\work-golamm\\\\db\")",
+      "Bash(npm install *)"
     ],
     "additionalDirectories": [
       "d:\\work-golamm\\backend\\src\\auth"

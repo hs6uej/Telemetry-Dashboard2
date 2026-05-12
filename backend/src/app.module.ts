@@ -5,10 +5,12 @@ import { AuthModule } from './auth/auth.module';
 import { StationsModule } from './stations/stations.module';
 import { ReadingsModule } from './readings/readings.module';
 import { UsersModule } from './users/users.module';
+import { ConfigsModule } from './configs/configs.module';
 import { User } from './entities/user.entity';
 import { Station } from './entities/station.entity';
 import { StationReading } from './entities/station-reading.entity';
 import { ActivityLog } from './entities/activity-log.entity';
+import { ApiConfig } from './entities/api-config.entity';
 
 @Module({
   imports: [
@@ -22,9 +24,8 @@ import { ActivityLog } from './entities/activity-log.entity';
         username: config.get('DB_USERNAME', 'postgres'),
         password: config.get('DB_PASSWORD', 'password'),
         database: config.get('DB_DATABASE', 'telemetry'),
-        entities: [User, Station, StationReading, ActivityLog],
+        entities: [User, Station, StationReading, ActivityLog, ApiConfig],
         synchronize: false,
-        ssl: false,
       }),
       inject: [ConfigService],
     }),
@@ -32,6 +33,7 @@ import { ActivityLog } from './entities/activity-log.entity';
     StationsModule,
     ReadingsModule,
     UsersModule,
+    ConfigsModule,
   ],
 })
 export class AppModule {}

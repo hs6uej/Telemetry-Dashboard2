@@ -61,5 +61,13 @@ export const api = {
     delete: (id: number) => request(`/users/${id}`, { method: 'DELETE' }),
     approve: (id: number) => request(`/users/${id}/approve`, { method: 'POST' }),
     logs: () => request<any[]>('/users/logs'),
+    clearLogs: () => request('/users/logs/clear', { method: 'DELETE' }),
+  },
+  configs: {
+    list: () => request<any[]>('/configs'),
+    create: (data: any) => request('/configs', { method: 'POST', body: JSON.stringify(data) }),
+    update: (id: number, data: any) => request(`/configs/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    delete: (id: number) => request(`/configs/${id}`, { method: 'DELETE' }),
+    send: (id: number) => request(`/configs/${id}/send`, { method: 'POST' }),
   },
 }

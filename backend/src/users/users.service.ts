@@ -60,7 +60,13 @@ export class UsersService {
   }
 
   getLogs() {
-    return this.logsRepo.find({ order: { timestamp: 'DESC' }, take: 200 });
+    return this.logsRepo.query(`
+      SELECT l.*, u.username AS user_name
+      FROM activity_logs l
+      LEFT JOIN users u ON l.user_id = u.id
+      ORDER BY l.timestamp DESC
+      LIMIT 200
+    `);
   }
 
   async clearLogs(adminId: number) {

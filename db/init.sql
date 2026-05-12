@@ -54,6 +54,19 @@ FROM station_readings
 GROUP BY bucket, station_id
 WITH NO DATA;
 
+-- API Configs (external integrations)
+CREATE TABLE IF NOT EXISTS api_configs (
+  id            SERIAL PRIMARY KEY,
+  name          VARCHAR(100) NOT NULL,
+  api_endpoint  VARCHAR(500) NOT NULL,
+  api_key       VARCHAR(255),
+  send_interval INTEGER DEFAULT 300,
+  enabled       BOOLEAN DEFAULT TRUE,
+  last_sent     TIMESTAMPTZ,
+  created_at    TIMESTAMPTZ DEFAULT NOW(),
+  updated_at    TIMESTAMPTZ DEFAULT NOW()
+);
+
 -- Activity logs
 CREATE TABLE IF NOT EXISTS activity_logs (
   id        SERIAL PRIMARY KEY,
@@ -71,6 +84,12 @@ CREATE INDEX IF NOT EXISTS idx_logs_timestamp ON activity_logs (timestamp DESC);
 INSERT INTO users (username, password, role, approved) VALUES
   ('admin', '$2b$10$XxZJZJ3RS7tQogKiQm1blexeVd0NpQVyGXToJNLgEj/aE5aMPWefW', 'admin', TRUE)
 ON CONFLICT (username) DO NOTHING;
+
+-- Default API configs
+INSERT INTO api_configs (name, api_endpoint, api_key, send_interval, enabled) VALUES
+  ('กรมชลประทาน API', 'https://api.rid.go.th/api/v1/telemetry', '', 300, TRUE),
+  ('ระบบแจ้งเตือนน้ำ', 'https://water-warning.example.com/data', '', 600, FALSE)
+ON CONFLICT DO NOTHING;
 
 -- Sample stations
 INSERT INTO stations (name, lat, lng, water_level, rain_level, status, left_bank, right_bank, warning_level) VALUES
