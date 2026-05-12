@@ -5,20 +5,18 @@ import { CreateReadingDto } from './dto/create-reading.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 @ApiTags('readings')
-@ApiBearerAuth()
-@UseGuards(JwtAuthGuard)
 @Controller()
 export class ReadingsController {
   constructor(private readingsService: ReadingsService) {}
 
   @Get('readings/latest')
-  @ApiOperation({ summary: 'ดูค่าล่าสุดของทุกสถานี' })
+  @ApiOperation({ summary: 'ดูค่าล่าสุดของทุกสถานี (public)' })
   getLatestAll() {
     return this.readingsService.getLatestAll();
   }
 
   @Get('stations/:id/readings')
-  @ApiOperation({ summary: 'ดูประวัติค่าของสถานี' })
+  @ApiOperation({ summary: 'ดูประวัติค่าของสถานี (public)' })
   @ApiQuery({ name: 'hours', required: false, description: 'จำนวนชั่วโมงย้อนหลัง (default: 24)', example: 24 })
   getReadings(
     @Param('id', ParseIntPipe) id: number,
@@ -28,7 +26,9 @@ export class ReadingsController {
   }
 
   @Post('stations/:id/readings')
-  @ApiOperation({ summary: 'บันทึกค่าใหม่สำหรับสถานี' })
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: '[JWT] บันทึกค่าใหม่สำหรับสถานี' })
   @ApiResponse({ status: 201 })
   addReading(@Param('id', ParseIntPipe) id: number, @Body() dto: CreateReadingDto) {
     return this.readingsService.addReading(id, dto);

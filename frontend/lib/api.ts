@@ -1,4 +1,8 @@
-const BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api'
+function getBase(): string {
+  if (typeof window === 'undefined') return 'http://localhost:3001/api'
+  // ใช้ hostname เดียวกับ frontend แต่ port 3001 — ทำงานได้ทุก server IP
+  return `${window.location.protocol}//${window.location.hostname}:3001/api`
+}
 
 function getToken(): string | null {
   if (typeof window === 'undefined') return null
@@ -13,11 +17,12 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   }
   if (token) headers['Authorization'] = `Bearer ${token}`
 
-  const res = await fetch(`${BASE}${path}`, { ...options, headers })
+  const res = await fetch(`${getBase()}${path}`, { ...options, headers })
+
   if (res.status === 401) {
     if (typeof window !== 'undefined') {
       localStorage.removeItem('access_token')
-      window.location.href = '/login'
+      localStorage.removeItem('user')
     }
     throw new Error('Unauthorized')
   }

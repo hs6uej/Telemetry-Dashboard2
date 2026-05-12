@@ -9,28 +9,28 @@ import { Roles } from '../auth/roles.decorator';
 import { Station } from '../entities/station.entity';
 
 @ApiTags('stations')
-@ApiBearerAuth()
-@UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('stations')
 export class StationsController {
   constructor(private stationsService: StationsService) {}
 
   @Get()
-  @ApiOperation({ summary: 'ดูรายการสถานีทั้งหมด' })
+  @ApiOperation({ summary: 'ดูรายการสถานีทั้งหมด (public)' })
   @ApiResponse({ status: 200, type: [Station] })
   findAll() {
     return this.stationsService.findAll();
   }
 
   @Get(':id')
-  @ApiOperation({ summary: 'ดูข้อมูลสถานีตาม ID' })
+  @ApiOperation({ summary: 'ดูข้อมูลสถานีตาม ID (public)' })
   @ApiResponse({ status: 200, type: Station })
   findOne(@Param('id', ParseIntPipe) id: number) {
     return this.stationsService.findOne(id);
   }
 
   @Post()
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin')
+  @ApiBearerAuth()
   @ApiOperation({ summary: '[Admin] เพิ่มสถานีใหม่' })
   @ApiResponse({ status: 201, type: Station })
   create(@Body() dto: CreateStationDto, @Request() req) {
@@ -38,7 +38,9 @@ export class StationsController {
   }
 
   @Put(':id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin')
+  @ApiBearerAuth()
   @ApiOperation({ summary: '[Admin] แก้ไขข้อมูลสถานี' })
   @ApiResponse({ status: 200, type: Station })
   update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateStationDto, @Request() req) {
@@ -46,7 +48,9 @@ export class StationsController {
   }
 
   @Delete(':id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin')
+  @ApiBearerAuth()
   @ApiOperation({ summary: '[Admin] ลบสถานี' })
   remove(@Param('id', ParseIntPipe) id: number, @Request() req) {
     return this.stationsService.remove(id, req.user.id);

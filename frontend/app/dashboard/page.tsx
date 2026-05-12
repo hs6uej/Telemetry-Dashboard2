@@ -10,16 +10,16 @@ import StationDetail from '@/components/stations/StationDetail'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { cn } from '@/lib/utils'
-import { Droplets, LogOut, RefreshCw, Map, Table, AlertTriangle, CheckCircle2, WifiOff } from 'lucide-react'
+import { Droplets, LogOut, LogIn, RefreshCw, Map, Table, AlertTriangle, CheckCircle2, WifiOff } from 'lucide-react'
 
 const TelemetryMap = dynamic(() => import('@/components/map/TelemetryMap'), { ssr: false })
 
 function statusCounts(stations: Station[]) {
   return {
-    normal: stations.filter(s => s.status === 'normal').length,
-    warning: stations.filter(s => s.status === 'warning').length,
+    normal:   stations.filter(s => s.status === 'normal').length,
+    warning:  stations.filter(s => s.status === 'warning').length,
     critical: stations.filter(s => s.status === 'critical').length,
-    offline: stations.filter(s => s.status === 'offline').length,
+    offline:  stations.filter(s => s.status === 'offline').length,
   }
 }
 
@@ -51,7 +51,7 @@ export default function DashboardPage() {
   function logout() {
     localStorage.removeItem('access_token')
     localStorage.removeItem('user')
-    router.push('/login')
+    setUser(null)
   }
 
   const counts = statusCounts(stations)
@@ -73,10 +73,10 @@ export default function DashboardPage() {
         {/* Status summary */}
         <div className="hidden md:flex items-center gap-4 text-xs">
           {[
-            { key: 'normal',   label: 'ปกติ',      icon: <CheckCircle2 className="w-3 h-3" />, color: 'text-emerald-400' },
-            { key: 'warning',  label: 'เฝ้าระวัง',  icon: <AlertTriangle className="w-3 h-3" />, color: 'text-amber-400' },
-            { key: 'critical', label: 'วิกฤต',      icon: <AlertTriangle className="w-3 h-3" />, color: 'text-red-400' },
-            { key: 'offline',  label: 'ออฟไลน์',    icon: <WifiOff className="w-3 h-3" />, color: 'text-slate-400' },
+            { key: 'normal',   label: 'ปกติ',     icon: <CheckCircle2 className="w-3 h-3" />, color: 'text-emerald-400' },
+            { key: 'warning',  label: 'เฝ้าระวัง', icon: <AlertTriangle className="w-3 h-3" />, color: 'text-amber-400' },
+            { key: 'critical', label: 'วิกฤต',     icon: <AlertTriangle className="w-3 h-3" />, color: 'text-red-400' },
+            { key: 'offline',  label: 'ออฟไลน์',   icon: <WifiOff className="w-3 h-3" />, color: 'text-slate-400' },
           ].map(({ key, label, icon, color }) => (
             <div key={key} className={cn('flex items-center gap-1', color)}>
               {icon}
@@ -93,10 +93,19 @@ export default function DashboardPage() {
           <Button variant="ghost" size="icon" onClick={loadStations} title="รีเฟรช">
             <RefreshCw className="w-4 h-4" />
           </Button>
-          {user && <span className="text-xs text-muted-foreground hidden sm:block">{user.username}</span>}
-          <Button variant="ghost" size="icon" onClick={logout} title="ออกจากระบบ">
-            <LogOut className="w-4 h-4" />
-          </Button>
+          {user ? (
+            <>
+              <span className="text-xs text-muted-foreground hidden sm:block">{user.username}</span>
+              <Button variant="ghost" size="icon" onClick={logout} title="ออกจากระบบ">
+                <LogOut className="w-4 h-4" />
+              </Button>
+            </>
+          ) : (
+            <Button variant="outline" size="sm" onClick={() => router.push('/login')} className="gap-1.5">
+              <LogIn className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">เข้าสู่ระบบ</span>
+            </Button>
+          )}
         </div>
       </header>
 
@@ -131,7 +140,7 @@ export default function DashboardPage() {
           </Tabs>
         </div>
 
-        {/* Map area */}
+        {/* Map */}
         <div className="flex-1 relative overflow-hidden">
           {loading ? (
             <div className="absolute inset-0 flex items-center justify-center">
