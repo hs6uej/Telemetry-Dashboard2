@@ -1,0 +1,1380 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ระบบโทรมาตร - เพื่อการพยากรณ์น้ำและเตือนภัย</title>
+
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <!-- Fonts (Thai) -->
+  <link
+    href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600&family=Sarabun:wght@300;400;500;600&display=swap"
+    rel="stylesheet" />
+
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html,
+    body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Kanit', 'Sarabun', sans-serif;
+      background: #f0f2f5;
+      color: #000000d9;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ===== HEADER ===== */
+    header {
+      height: var(--header-height);
+      background: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+      z-index: 1005;
+      /* Rounded bottom corners like the RID site */
+      border-bottom-left-radius: 24px;
+      border-bottom-right-radius: 24px;
+      border: 1px solid var(--border-color);
+      margin: 0 10px;
+      /* Slight gap from edges */
+    }
+
+    .logo-img {
+      height: 40px;
+      cursor: pointer;
+    }
+
+    .header-nav {
+      display: flex;
+      gap: 32px;
+      margin-left: 48px;
+      flex: 1;
+    }
+
+    .nav-link {
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-weight: 400;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      position: relative;
+      padding: 20px 0;
+      transition: var(--transition);
+    }
+
+    .nav-link:hover,
+    .nav-link.active {
+      color: var(--primary-color);
+    }
+
+    .nav-link.active::after {
+      content: '';
+      position: absolute;
+      bottom: -1px;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: var(--primary-color);
+    }
+
+    .login-btn {
+      background: var(--primary-color);
+      color: #fff;
+      border: none;
+      padding: 6px 16px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 500;
+      transition: var(--transition);
+    }
+
+    .login-btn:hover {
+      background: #40a9ff;
+      box-shadow: 0 2px 4px rgba(24, 144, 255, 0.2);
+    }
+
+    .clock-container {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      min-width: 100px;
+    }
+
+    .clock-time {
+      font-size: 16px;
+      font-weight: 600;
+      color: #000;
+    }
+
+    .clock-date {
+      font-size: 11px;
+      color: #8c8c8c;
+    }
+
+    /* ===== STATUS BAR ===== */
+    .status-bar {
+      display: none;
+    }
+
+    /* ===== MAIN LAYOUT ===== */
+    .main {
+      display: flex;
+      flex: 1;
+      height: calc(100vh - 64px);
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* ===== FLOATING BOXES (RID Style) ===== */
+    .box-station-search {
+      position: absolute;
+      top: 40px;
+      left: 40px;
+      width: 350px;
+      background: transparent;
+      padding: 0;
+      z-index: 1001;
+      transition: transform 0.3s cubic-bezier(0.7, 0.3, 0.1, 1);
+    }
+
+    .box-station-search.collapsed {
+      transform: translateX(-310px);
+    }
+
+    /* Hide internal elements when collapsed */
+    .box-station-search.collapsed h1 span,
+    .box-station-search.collapsed p,
+    .box-station-search.collapsed .search-input-container {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+
+    .box-station-search h1 {
+      margin: 0;
+      font-size: 28px;
+      font-weight: 600;
+      color: #333;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      transition: var(--transition);
+    }
+
+    .box-station-search p,
+    .search-input-container {
+      transition: opacity 0.3s ease, visibility 0.3s ease;
+    }
+
+    .box-station-search p {
+      margin: 4px 0 24px;
+      font-size: 16px;
+      /* Larger like reference */
+      color: #555;
+    }
+
+    .search-input-container {
+      position: relative;
+      background: #fff;
+      /* Input itself stays white */
+      border-radius: 24px;
+      /* Pill shape */
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      overflow: hidden;
+      border: 1px solid #eee;
+    }
+
+    .search-input {
+      width: 100%;
+      padding: 12px 16px;
+      border: none;
+      font-size: 14px;
+      outline: none;
+      background: transparent;
+    }
+
+    .search-input:focus {
+      border-color: var(--primary-color);
+      box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.1);
+    }
+
+    .sidebar {
+      display: none;
+    }
+
+    /* ===== MAP AREA ===== */
+    .map-container {
+      flex: 1;
+      position: relative;
+      overflow: hidden;
+    }
+
+    #map {
+      width: 100%;
+      height: 100%;
+    }
+
+    /* Leaflet popup custom */
+    .leaflet-popup-content-wrapper {
+      background: #ffffff;
+      border: 1px solid #e0e6ed;
+      border-top: 4px solid #1976d2;
+      border-radius: 12px;
+      color: #2c3e50;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+    }
+
+    .leaflet-popup-tip {
+      background: #ffffff;
+    }
+
+    .popup-content {
+      padding: 6px;
+    }
+
+    .popup-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: #1976d2;
+      margin-bottom: 10px;
+    }
+
+    .popup-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 6px;
+      font-size: 12px;
+    }
+
+    .popup-label {
+      color: #64748b;
+    }
+
+    .popup-value {
+      font-weight: 700;
+      color: #1e293b;
+    }
+
+    .popup-btn {
+      margin-top: 10px;
+      width: 100%;
+      padding: 8px;
+      background: #1976d2;
+      border: none;
+      border-radius: 8px;
+      color: #ffffff;
+      font-weight: 700;
+      font-size: 12px;
+      font-family: 'Sarabun', sans-serif;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .popup-btn:hover {
+      background: #1565c0;
+    }
+
+    /* Map overlay legend (BOTTOM RIGHT) */
+    .map-legend {
+      position: absolute;
+      bottom: 24px;
+      right: 24px;
+      background: #ffffff;
+      border-radius: 8px;
+      padding: 14px;
+      font-size: 12px;
+      box-shadow: var(--shadow-md);
+      z-index: 1000;
+      border: 1px solid var(--border-color);
+      min-width: 150px;
+    }
+
+    .legend-title {
+      font-size: 11px;
+      font-weight: 700;
+      color: #1976d2;
+      margin-bottom: 10px;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+
+    .legend-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 5px;
+    }
+
+    .legend-circle {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      border: 1px solid rgba(0, 0, 0, 0.1);
+      flex-shrink: 0;
+    }
+
+    .lc-normal {
+      background: #2ecc71;
+    }
+
+    .lc-warning {
+      background: #f39c12;
+    }
+
+    .lc-critical {
+      background: #e74c3c;
+    }
+
+    .lc-offline {
+      background: #7f8c8d;
+    }
+
+    /* Map info overlay (TOP RIGHT) */
+    .map-info-overlay {
+      position: absolute;
+      bottom: 24px; /* Moved to bottom */
+      left: 24px;   /* Moved to left */
+      top: auto;
+      right: auto;
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(8px);
+      padding: 16px;
+      border-radius: 8px;
+      box-shadow: var(--shadow-md);
+      z-index: 1001;
+      border: 1px solid var(--border-color);
+    }
+
+    .map-info-title {
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-bottom: 12px;
+      font-weight: 500;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 8px;
+    }
+
+    .map-stat-row {
+      display: flex;
+      gap: 20px;
+    }
+
+    .map-stat {
+      text-align: center;
+    }
+
+    .map-stat-num {
+      font-size: 18px;
+      font-weight: 600;
+    }
+
+    .map-stat-label {
+      font-size: 11px;
+      color: var(--text-secondary);
+      margin-top: 2px;
+    }
+
+    /* Pulsing marker animation */
+    @keyframes pulse {
+      0% {
+        transform: scale(1);
+        opacity: 1;
+      }
+
+      50% {
+        transform: scale(1.4);
+        opacity: 0.5;
+      }
+
+      100% {
+        transform: scale(1);
+        opacity: 1;
+      }
+    }
+
+    .pulse-critical {
+      animation: pulse 1.2s infinite;
+    }
+
+    /* ===== RIGHT PANEL (Enterprise Detail) ===== */
+    .right-panel {
+      width: 0;
+      height: 100%;
+      background: #fff;
+      border-left: 1px solid var(--border-color);
+      transition: width 0.3s cubic-bezier(0.7, 0.3, 0.1, 1);
+      overflow-y: auto;
+      z-index: 1002;
+    }
+
+    .right-panel.open {
+      width: var(--panel-width);
+    }
+
+    .right-panel-header {
+      padding: 20px 24px;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      background: #fff;
+      z-index: 10;
+    }
+
+    .right-panel-title {
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--text-main);
+    }
+
+    .close-btn {
+      background: none;
+      border: none;
+      font-size: 20px;
+      cursor: pointer;
+      color: var(--text-secondary);
+      padding: 4px;
+      border-radius: 4px;
+      transition: var(--transition);
+    }
+
+    .close-btn:hover {
+      background: #f5f5f5;
+      color: var(--error-color);
+    }
+
+    .detail-card {
+      background: #fff;
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+      padding: 20px;
+      margin: 24px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .detail-card-title {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .gauge-row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 0;
+    }
+
+    .gauge-item {
+      text-align: center;
+      flex: 1;
+    }
+
+    .gauge-value {
+      font-size: 28px;
+      font-weight: 700;
+      line-height: 1.2;
+    }
+
+    .gauge-unit {
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-top: 4px;
+    }
+
+    .gauge-label {
+      font-size: 13px;
+      color: var(--text-main);
+      margin-top: 8px;
+      font-weight: 400;
+    }
+
+    .chart-box {
+      background: #fff;
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+      padding: 20px;
+      margin: 0 24px 24px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .grid-info {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin: 0 24px 24px;
+    }
+
+    .info-item {
+      color: #1e293b;
+      margin-top: 2px;
+    }
+
+    /* ===== ANIMATIONS & MARKERS ===== */
+    @keyframes pulse-red {
+      0% {
+        box-shadow: 0 0 0 0 rgba(245, 34, 45, 0.5);
+      }
+
+      70% {
+        box-shadow: 0 0 0 8px rgba(245, 34, 45, 0);
+      }
+
+      100% {
+        box-shadow: 0 0 0 0 rgba(245, 34, 45, 0);
+      }
+    }
+
+    @keyframes pulse-orange {
+      0% {
+        box-shadow: 0 0 0 0 rgba(250, 173, 20, 0.5);
+      }
+
+      70% {
+        box-shadow: 0 0 0 8px rgba(250, 173, 20, 0);
+      }
+
+      100% {
+        box-shadow: 0 0 0 0 rgba(250, 173, 20, 0);
+      }
+    }
+
+    .pulse-critical {
+      animation: pulse-red 1.5s infinite;
+    }
+
+    .pulse-warning {
+      animation: pulse-orange 1.5s infinite;
+    }
+
+    .custom-marker {
+      transition: transform 0.2s ease;
+    }
+
+    .custom-marker:hover {
+      transform: scale(1.2);
+      z-index: 1000 !important;
+    }
+
+    /* ===== RESPONSIVE ===== */
+    @media (max-width: 768px) {
+      .main {
+        flex-direction: column;
+      }
+
+      .right-panel {
+        width: 100%;
+        height: 0;
+        border-left: none;
+        border-top: 1px solid #e0e6ed;
+      }
+
+      .right-panel.open {
+        height: 40%;
+        width: 100%;
+      }
+
+      .box-station-search {
+        width: calc(100% - 48px);
+        padding: 12px;
+        top: 12px;
+        left: 12px;
+      }
+
+      .map-info-overlay {
+        display: none;
+      }
+
+      /* Hide summary on mobile to save space */
+    }
+
+    /* Style Leaflet Layer Control to match Ant Design */
+    .leaflet-control-layers {
+      border: 1px solid var(--border-color) !important;
+      box-shadow: var(--shadow-md) !important;
+      border-radius: 8px !important;
+      padding: 4px !important;
+      z-index: 1010 !important; /* Higher than map-info-overlay */
+    }
+    .leaflet-control-layers-expanded {
+      padding: 10px 14px !important;
+      font-family: 'Kanit', sans-serif;
+      font-size: 13px;
+      color: var(--text-main);
+    }
+    .leaflet-control-layers-list label {
+      margin-bottom: 6px;
+      cursor: pointer;
+    }
+    .leaflet-control-layers-base label { font-weight: 500; }
+    .leaflet-control-layers-separator { margin: 8px 0 !important; border-top: 1px solid var(--border-color) !important; }
+
+    /* Hide Leaflet attribution flag */
+    .leaflet-attribution-flag {
+      display: none !important;
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- ===== HEADER ===== -->
+  <header>
+    <img src="https://telerid.rid.go.th/static/media/logo.7e64c49a.png" class="logo-img" alt="RID Logo"
+      onclick="location.reload()">
+
+    <div class="header-nav">
+      <a class="nav-link active" onclick="setView('map')">
+        <!-- <img src="https://telerid.rid.go.th/static/media/logo.7e64c49a.png" width="16" alt=""> -->
+        หน้าหลัก
+      </a>
+    </div>
+
+    <div class="header-right-actions" style="display: flex; align-items: center; gap: 20px;">
+      <div class="clock-container">
+        <div class="clock-time" id="clock">--:--:--</div>
+        <div class="clock-date" id="clock-date">...</div>
+      </div>
+      <button class="login-btn">
+        <svg viewBox="64 64 896 896" width="16" height="16" fill="currentColor">
+          <path
+            d="M521.7 82c-152.5-.4-286.7 78.5-363.4 197.7-3.4 5.3.4 12.3 6.7 12.3h70.3c4.8 0 9.3-2.1 12.3-5.8 7-8.5 14.5-16.7 22.4-24.5 32.6-32.5 70.5-58.1 112.7-75.9 43.6-18.4 90-27.8 137.9-27.8 47.9 0 94.3 9.3 137.9 27.8 42.2 17.8 80.1 43.4 112.7 75.9 32.6 32.5 58.1 70.4 76 112.5C865.7 417.8 875 464.1 875 512c0 47.9-9.4 94.2-27.8 137.8-17.8 42.1-43.4 80-76 112.5s-70.5 58.1-112.7 75.9A352.8 352.8 0 01520.6 866c-47.9 0-94.3-9.4-137.9-27.8A353.84 353.84 0 01270 762.3c-7.9-7.9-15.3-16.1-22.4-24.5-3-3.7-7.6-5.8-12.3-5.8H165c-6.3 0-10.2 7-6.7 12.3C234.9 863.2 368.5 942 520.6 942c236.2 0 428-190.1 430.4-425.6C953.4 277.1 761.3 82.6 521.7 82zM395.02 624v-76h-314c-4.4 0-8-3.6-8-8v-56c0-4.4 3.6-8 8-8h314v-76c0-6.7 7.8-10.5 13-6.3l141.9 112a8 8 0 010 12.6l-141.9 112c-5.2 4.1-13 .4-13-6.3z">
+          </path>
+        </svg>
+        เข้าสู่ระบบ
+      </button>
+    </div>
+  </header>
+
+  <!-- ===== STATUS BAR ===== -->
+  <div class="status-bar">
+    <span class="status-bar-label">สถานะสถานี</span>
+    <div class="stat-pill">
+      <div class="stat-dot dot-normal"></div>
+      <span>ปกติ</span>
+      <span id="cnt-normal" style="color:#2ecc71">0</span>
+    </div>
+    <div class="stat-pill">
+      <div class="stat-dot dot-warning"></div>
+      <span>เฝ้าระวัง</span>
+      <span id="cnt-warning" style="color:#f39c12">0</span>
+    </div>
+    <div class="stat-pill">
+      <div class="stat-dot dot-critical"></div>
+      <span>วิกฤต</span>
+      <span id="cnt-critical" style="color:#e74c3c">0</span>
+    </div>
+    <div class="stat-pill">
+      <div class="stat-dot dot-offline"></div>
+      <span>ออฟไลน์</span>
+      <span id="cnt-offline" style="color:#95a5a6">0</span>
+    </div>
+    <div class="update-time">อัปเดตล่าสุด: <span id="last-update">--</span></div>
+  </div>
+
+  <!-- ===== MAIN ===== -->
+  <div class="main">
+
+    <!-- MAP AREA -->
+    <div class="map-container">
+      <div id="map"></div>
+
+      <!-- Floating Search Box (RID Style) -->
+      <div class="box-station-search" id="search-box">
+        <h1><span>ระบบโทรมาตร</span>
+          <div class="collapse-btn" onclick="toggleSearchCollapse()"
+            style="background:#fff; width:36px; height:36px; border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer; box-shadow:0 2px 8px rgba(0,0,0,0.1); margin-left:auto">
+            <svg id="fold-icon" viewBox="64 64 896 896" width="18" height="18" fill="#555">
+              <path
+                d="M408 442h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8zm-8 204c0 4.4 3.6 8 8 8h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56zm504-486H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zm0 632H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zM115.4 518.9L271.7 642c5.8 4.6 14.4.5 14.4-6.9V388.9c0-7.4-8.5-11.5-14.4-6.9L115.4 505.1a8.74 8.74 0 000 13.8z">
+              </path>
+            </svg>
+          </div>
+        </h1>
+        <p>เพื่อการพยากรณ์น้ำและเตือนภัย</p>
+
+        <div class="search-input-container">
+          <svg
+            style="position:absolute; left:16px; top:50%; transform:translateY(-50%); width:16px; height:16px; fill:#bfbfbf"
+            viewBox="64 64 896 896">
+            <path
+              d="M909.6 854.5L649.9 594.8C690.2 542.7 712 479 712 412c0-165.7-134.3-300-300-300S112 246.3 112 412s134.3 300 300 300c67 0 130.7-21.8 182.8-62.1l259.7 259.7c4.3 4.3 11.4 4.3 15.7 0l45.2-45.2c2.3-2.3 2.3-6.1 0-8.4zM412 650c-131.4 0-238-106.6-238-238s106.6-238 238-238 238 106.6 238 238-106.6 238-238 238z">
+            </path>
+          </svg>
+          <input type="text" class="search-input" style="padding-left:44px" placeholder="ค้นหาชื่อสถานี ชื่อลุ่มน้ำ"
+            id="station-search" oninput="filterStationsByText()">
+        </div>
+      </div>
+
+      <!-- Map overlay: summary -->
+      <div class="map-info-overlay">
+        <div class="map-info-title">ภาพรวมสถานีวัด</div>
+        <div class="map-stat-row">
+          <div class="map-stat">
+            <div class="map-stat-num" style="color:#e0e6f0">5</div>
+            <div class="map-stat-label">ทั้งหมด</div>
+          </div>
+          <div class="map-stat">
+            <div class="map-stat-num" style="color:#2ecc71" id="ov-normal">0</div>
+            <div class="map-stat-label">ปกติ</div>
+          </div>
+          <div class="map-stat">
+            <div class="map-stat-num" style="color:#f39c12" id="ov-warning">0</div>
+            <div class="map-stat-label">เฝ้าระวัง</div>
+          </div>
+          <div class="map-stat">
+            <div class="map-stat-num" style="color:#e74c3c" id="ov-critical">0</div>
+            <div class="map-stat-label">วิกฤต</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Legend -->
+      <div class="map-legend">
+        <div class="legend-title">สถานะสถานี</div>
+        <div class="legend-row">
+          <div class="legend-circle lc-normal"></div><span>ปกติ (Normal)</span>
+        </div>
+        <div class="legend-row">
+          <div class="legend-circle lc-warning"></div><span>เฝ้าระวัง (Warning)</span>
+        </div>
+        <div class="legend-row">
+          <div class="legend-circle lc-critical"></div><span>วิกฤต (Critical)</span>
+        </div>
+        <div class="legend-row">
+          <div class="legend-circle lc-offline"></div><span>ออฟไลน์ (Offline)</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT DETAIL PANEL -->
+    <div class="right-panel" id="right-panel">
+      <div class="right-panel-header">
+        <div class="right-panel-title" id="detail-title">รายละเอียด</div>
+        <button class="close-btn" onclick="closeDetail()">✕</button>
+      </div>
+
+      <div class="detail-card">
+        <div class="detail-card-title">
+          <svg width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
+            <path
+              d="M8 16a8 8 0 1 0 0-16 8 8 0 0 0 0 16zm.93-9.412-1 4.705c-.07.34.029.533.308.533.19 0 .452-.084.826-.253l.113.193a4.478 4.478 0 0 1-1.127.387c-.19.045-.345.067-.465.067-.474 0-.766-.233-.876-.7l.93-4.705c-.07-.34.029-.533.308-.533.19 0 .452.084.826.253l.113.193a4.478 4.478 0 0 1-1.127.387c-.19.045-.345.067-.465.067-.474 0-.766-.233-.876-.7l.93-4.706c.07-.34-.029-.533-.308-.533-.19 0 .452.084-.826.253l-.113-.193c.285-.11.597-.243.937-.398.113-.051.21-.081.29-.091a.486.486 0 0 1 .159.01c.143.035.214.17.214.407 0 .06-.013.13-.039.208l-.94 4.705zM8 5a1 1 0 1 1 0-2 1 1 0 0 1 0 2z" />
+          </svg>
+          ค่าปัจจุบัน
+        </div>
+        <div class="gauge-row">
+          <div class="gauge-item">
+            <div class="gauge-value" id="d-waterlevel" style="color:var(--primary-color)">--</div>
+            <div class="gauge-unit">เมตร</div>
+            <div class="gauge-label">ระดับน้ำ</div>
+          </div>
+          <div class="gauge-item">
+            <div class="gauge-value" id="d-rain" style="color:var(--success-color)">--</div>
+            <div class="gauge-unit">มม./ชม.</div>
+            <div class="gauge-label">ปริมาณฝน</div>
+          </div>
+          <div class="gauge-item">
+            <div class="gauge-value" id="d-flow" style="color:#722ed1">--</div>
+            <div class="gauge-unit">ม³/วิ</div>
+            <div class="gauge-label">อัตราไหล</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="chart-box">
+        <div class="detail-card-title">กราฟแสดงข้อมูลย้อนหลัง</div>
+        <div style="height: 180px;">
+          <canvas id="miniChart"></canvas>
+        </div>
+      </div>
+
+      <div class="grid-info">
+        <div class="info-item">
+          <div class="info-label">ระดับตลิ่ง</div>
+          <div class="info-val" id="d-bank">--</div>
+        </div>
+        <div class="info-item">
+          <div class="info-label">% ความจุ</div>
+          <div class="info-val" id="d-pct">--</div>
+        </div>
+        <div class="info-item">
+          <div class="info-label">แนวโน้ม</div>
+          <div class="info-val" id="d-trend">--</div>
+        </div>
+        <div class="info-item">
+          <div class="info-label">อัปเดต</div>
+          <div class="info-val" id="d-time" style="font-size:12px">--</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    // ============================================================
+    //  DATA — แก้ไขข้อมูลสถานีตรงนี้
+    // ============================================================
+    const STATIONS = [
+      {
+        id: 'TM001',
+        name: 'สถานีวัดน้ำ ป.1 (แม่น้ำปิง)',
+        region: 'north',
+        province: 'เชียงใหม่',
+        lat: 18.788, lon: 98.985,
+        waterLevel: 3.45, bankLevel: 4.20, rain: 2.0, flow: 150.0,
+        status: 'normal', trend: 'คงที่', lastUpdate: '22/04/2569 14:30',
+        history: {
+          water: [3.1, 3.2, 3.3, 3.4, 3.45, 3.45, 3.45],
+          rain: [0, 0, 5, 2, 2, 2, 2],
+          labels: ['08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00']
+        }
+      },
+      {
+        id: 'TM002',
+        name: 'สถานีวัดน้ำ C.2 (แม่น้ำเจ้าพระยา)',
+        region: 'central',
+        province: 'นครสวรรค์',
+        lat: 15.688, lon: 100.118,
+        waterLevel: 24.15, bankLevel: 26.00, rain: 0.0, flow: 1200.0,
+        status: 'normal', trend: 'ลดลง', lastUpdate: '22/04/2569 14:20',
+        history: {
+          water: [24.5, 24.4, 24.3, 24.2, 24.15, 24.15, 24.15],
+          rain: [0, 0, 0, 0, 0, 0, 0],
+          labels: ['08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00']
+        }
+      },
+      {
+        id: 'TM003',
+        name: 'สถานีวัดน้ำ M.7 (แม่น้ำมูล)',
+        region: 'northeast',
+        province: 'อุบลราชธานี',
+        lat: 15.228, lon: 104.856,
+        waterLevel: 111.50, bankLevel: 112.00, rain: 45.0, flow: 2100.0,
+        status: 'warning', trend: 'เพิ่มขึ้น', lastUpdate: '22/04/2569 14:15',
+        history: {
+          water: [110.1, 110.5, 111.0, 111.3, 111.50, 111.50, 111.50],
+          rain: [10, 20, 30, 45, 45, 45, 45],
+          labels: ['08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00']
+        }
+      },
+      {
+        id: 'TM004',
+        name: 'สถานีวัดน้ำ KGT.1 (แม่น้ำบางปะกง)',
+        region: 'east',
+        province: 'ฉะเชิงเทรา',
+        lat: 13.689, lon: 101.076,
+        waterLevel: 1.80, bankLevel: 2.50, rain: 0.0, flow: 85.0,
+        status: 'normal', trend: 'คงที่', lastUpdate: '22/04/2569 14:30',
+        history: {
+          water: [1.7, 1.75, 1.8, 1.8, 1.8, 1.8, 1.8],
+          rain: [0, 0, 0, 0, 0, 0, 0],
+          labels: ['08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00']
+        }
+      },
+      {
+        id: 'TM005',
+        name: 'สถานีวัดน้ำ X.1 (แม่น้ำตาปี)',
+        region: 'south',
+        province: 'สุราษฎร์ธานี',
+        lat: 9.138, lon: 99.321,
+        waterLevel: 5.60, bankLevel: 6.50, rain: 12.0, flow: 450.0,
+        status: 'normal', trend: 'เพิ่มขึ้น', lastUpdate: '22/04/2569 14:25',
+        history: {
+          water: [5.2, 5.3, 5.4, 5.5, 5.6, 5.6, 5.6],
+          rain: [0, 2, 5, 10, 12, 12, 12],
+          labels: ['08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00']
+        }
+      }
+    ];
+
+    // ============================================================
+    //  REGION BOUNDS (Approximate)
+    // ============================================================
+    const REGION_BOUNDS = {
+      north:     { minLat: 18.2, maxLat: 19.3, minLon: 98.8,  maxLon: 99.9 },
+      central:   { minLat: 14.2, maxLat: 15.5, minLon: 99.9,  maxLon: 100.6 },
+      northeast: { minLat: 14.9, maxLat: 16.2, minLon: 102.5, maxLon: 104.3 },
+      east:      { minLat: 12.9, maxLat: 13.7, minLon: 101.2, maxLon: 102.2 },
+      south:     { minLat: 7.5,  maxLat: 9.3,  minLon: 99.2,  maxLon: 100.3 }
+    };
+
+    // ============================================================
+    //  REGION DATA (For Randomization)
+    // ============================================================
+    const REGION_DATA = {
+      north:     { provinces: ['เชียงใหม่', 'แพร่', 'น่าน', 'แม่ฮ่องสอน'], rivers: ['แม่น้ำปิง', 'แม่น้ำยม', 'แม่น้ำน่าน'] },
+      central:   { provinces: ['นครสวรรค์', 'ชัยนาท', 'อยุธยา', 'อ่างทอง'], rivers: ['แม่น้ำเจ้าพระยา', 'แม่น้ำสะแกกรัง'] },
+      northeast: { provinces: ['อุบลราชธานี', 'ขอนแก่น', 'โคราช', 'สกลนคร'], rivers: ['แม่น้ำมูล', 'แม่น้ำชี'] },
+      east:      { provinces: ['ฉะเชิงเทรา', 'จันทบุรี', 'ระยอง', 'ปราจีนบุรี'], rivers: ['แม่น้ำบางปะกง', 'แม่น้ำปราจีนบุรี'] },
+      south:     { provinces: ['สุราษฎร์ธานี', 'นครศรีธรรมราช', 'สงขลา', 'ยะลา'], rivers: ['แม่น้ำตาปี', 'แม่น้ำปากพนัง'] }
+    };
+
+    const STATUS_COLOR = {
+      normal: '#52c41a', // RID Green
+      warning: '#faad14', // RID Yellow
+      critical: '#f5222d', // RID Red
+      offline: '#bfbfbf'  // RID Grey
+    };
+
+    const STATUS_LABEL = {
+      normal: 'ปกติ',
+      warning: 'เฝ้าระวัง',
+      critical: 'วิกฤต',
+      offline: 'ออฟไลน์'
+    };
+
+    // ============================================================
+    //  STATE
+    // ============================================================
+    let selectedId = null;
+    let chartType = 'water';
+    let sideChart = null;
+    let miniChart = null;
+    let map = null;
+    let markers = {};
+
+    // ============================================================
+    //  INIT
+    // ============================================================
+    window.addEventListener('DOMContentLoaded', () => {
+      initClock();
+      initMap();
+      updateStatusBar();
+      setLastUpdate();
+      // No default selection for a clean start
+    });
+
+    // ============================================================
+    //  CLOCK
+    // ============================================================
+    function initClock() {
+      function tick() {
+        const now = new Date();
+        document.getElementById('clock').textContent =
+          now.toLocaleTimeString('th-TH', { hour12: false });
+        document.getElementById('clock-date').textContent =
+          now.toLocaleDateString('th-TH', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+      }
+      tick();
+      setInterval(tick, 1000);
+    }
+
+    function setLastUpdate() {
+      const now = new Date();
+      document.getElementById('last-update').textContent =
+        now.toLocaleTimeString('th-TH', { hour12: false });
+    }
+
+    // ============================================================
+    //  MAP
+    // ============================================================
+    function initMap() {
+      map = L.map('map', {
+        zoomControl: false,
+        attributionControl: true
+      }).setView([13.736, 100.523], 6); // Changed from 5 to 6
+
+      // --- Base Layers ---
+      const topoLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', {
+        attribution: '&copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors'
+      });
+
+      const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+        attribution: '&copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors'
+      });
+
+      const lightLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+        attribution: '&copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors'
+      });
+
+      // --- Overlays (Transparent layers to stack on top) ---
+      const labelsLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png', {
+        attribution: '&copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors'
+      });
+
+      const bordersLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_split_boundaries/{z}/{x}/{y}{r}.png', {
+        attribution: '&copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors'
+      });
+
+      // Initialize with Topo as default
+      topoLayer.addTo(map);
+
+      const baseMaps = {
+        "ภูมิศาสตร์ (Topo)": topoLayer,
+        "ดาวเทียม (Satellite)": satelliteLayer,
+        "แบบสว่าง (Minimal)": lightLayer
+      };
+
+      const overlayMaps = {
+        "ชื่อสถานที่ / ถนน": labelsLayer,
+        "เส้นแบ่งเขตจังหวัด": bordersLayer
+      };
+
+      L.control.layers(baseMaps, overlayMaps, { position: 'topright', collapsed: true }).addTo(map);
+
+      STATIONS.forEach(s => {
+        const color = STATUS_COLOR[s.status];
+        const isPulse = s.status === 'critical';
+        const icon = L.divIcon({
+          className: 'custom-marker',
+          html: `
+        <div class="pulse-${s.status === 'normal' ? 'none' : s.status}" 
+             style="background:${STATUS_COLOR[s.status]}; 
+                    width:24px; height:24px; border-radius:50%; /* Circle markers like RID */
+                    border:2px solid #fff; box-shadow:var(--shadow-sm);
+                    display:flex; align-items:center; justify-content:center;
+                    color:#fff; font-size:8px; font-weight:700;">
+          ${s.id.slice(-2)}
+        </div>`,
+          iconSize: [24, 24],
+          iconAnchor: [12, 12]
+        });
+
+        const marker = L.marker([s.lat, s.lon], { icon })
+          .addTo(map)
+          .bindPopup(buildPopup(s));
+
+        marker.on('click', () => selectStation(s.id));
+        markers[s.id] = marker;
+      });
+    }
+
+    function buildPopup(s) {
+      const wl = s.waterLevel !== null ? s.waterLevel.toFixed(2) + ' ม.' : 'N/A';
+      const rn = s.rain !== null ? s.rain.toFixed(1) + ' มม.' : 'N/A';
+      const pct = s.waterLevel !== null
+        ? Math.min(100, Math.round((s.waterLevel / s.bankLevel) * 100)) + '%'
+        : 'N/A';
+
+      return `
+    <div class="popup-content">
+      <div class="popup-title">${s.name}</div>
+      <div class="popup-row"><span class="popup-label">รหัสสถานี</span><span class="popup-value">${s.id}</span></div>
+      <div class="popup-row"><span class="popup-label">ระดับน้ำ</span><span class="popup-value" style="color:#3498db">${wl}</span></div>
+      <div class="popup-row"><span class="popup-label">ปริมาณฝน</span><span class="popup-value" style="color:#1abc9c">${rn}</span></div>
+      <div class="popup-row"><span class="popup-label">% ระดับตลิ่ง</span><span class="popup-value" style="color:${STATUS_COLOR[s.status]}">${pct}</span></div>
+      <div class="popup-row"><span class="popup-label">สถานะ</span><span class="popup-value" style="color:${STATUS_COLOR[s.status]}">${STATUS_LABEL[s.status]}</span></div>
+      <button class="popup-btn" onclick="selectStation('${s.id}')">ดูรายละเอียด</button>
+    </div>
+  `;
+    }
+
+    // ============================================================
+    //  TABLE
+    // ============================================================
+
+    // ============================================================
+    //  FILTER BY TEXT
+    // ============================================================
+    function filterStationsByText() {
+      const query = document.getElementById('station-search').value.toLowerCase();
+      const filtered = STATIONS.filter(s =>
+        s.name.toLowerCase().includes(query) ||
+        s.id.toLowerCase().includes(query)
+      );
+      // In the floating design, we could show a list, but for now we'll just update markers
+      STATIONS.forEach(s => {
+        const isVisible = filtered.some(f => f.id === s.id);
+        if (markers[s.id]) {
+          if (isVisible) markers[s.id].addTo(map);
+          else map.removeLayer(markers[s.id]);
+        }
+      });
+    }
+
+    // ============================================================
+    //  STATUS BAR (Deprecated but kept logic for count)
+    // ============================================================
+    function updateStatusBar() {
+      const counts = { normal: 0, warning: 0, critical: 0, offline: 0 };
+      STATIONS.forEach(s => counts[s.status]++);
+
+      // Update overlays if they exist
+      const ovN = document.getElementById('ov-normal');
+      if (ovN) ovN.textContent = counts.normal;
+      const ovW = document.getElementById('ov-warning');
+      if (ovW) ovW.textContent = counts.warning;
+      const ovC = document.getElementById('ov-critical');
+      if (ovC) ovC.textContent = counts.critical;
+    }
+
+
+    // ============================================================
+    //  SELECT STATION
+    // ============================================================
+    function selectStation(id) {
+      selectedId = id;
+      const s = STATIONS.find(x => x.id === id);
+      if (!s) return;
+
+
+
+      // Open right panel
+      openDetail(s);
+
+      // Pan map to station
+      if (map && markers[id]) {
+        map.setView([s.lat, s.lon], 10, { animate: true });
+        markers[id].openPopup();
+        // Re-size map after panel opens
+        setTimeout(() => map.invalidateSize(), 350);
+      }
+    }
+
+    // ============================================================
+    //  SIDE CHART (bottom of sidebar)
+    // ============================================================
+
+    // ============================================================
+    //  RIGHT DETAIL PANEL
+    // ============================================================
+    function openDetail(s) {
+      document.getElementById('right-panel').classList.add('open');
+      document.getElementById('detail-title').textContent = s.id + ' — ' + s.name.replace('สถานีวัดน้ำ ', '');
+
+      document.getElementById('d-waterlevel').textContent = s.waterLevel !== null ? s.waterLevel.toFixed(2) : '--';
+      document.getElementById('d-rain').textContent = s.rain !== null ? s.rain.toFixed(1) : '--';
+      document.getElementById('d-flow').textContent = s.flow !== null ? s.flow.toFixed(1) : '--';
+      document.getElementById('d-bank').textContent = s.bankLevel.toFixed(2) + ' ม.';
+      document.getElementById('d-trend').textContent = s.trend;
+      document.getElementById('d-time').textContent = s.lastUpdate;
+
+      const pct = s.waterLevel !== null
+        ? Math.min(100, Math.round((s.waterLevel / s.bankLevel) * 100))
+        : 0;
+      document.getElementById('d-pct').textContent = pct + '%';
+
+      // color trend
+      const el = document.getElementById('d-trend');
+      el.style.color = s.trend.includes('เร็ว') ? 'var(--error-color)'
+        : s.trend.includes('เพิ่ม') ? 'var(--warning-color)'
+          : s.trend.includes('ลด') ? 'var(--primary-color)'
+            : 'var(--success-color)';
+
+      // mini chart
+      const ctx = document.getElementById('miniChart').getContext('2d');
+      if (miniChart) miniChart.destroy();
+      miniChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: s.history.labels,
+          datasets: [
+            {
+              label: 'ระดับน้ำ',
+              data: s.history.water,
+              backgroundColor: '#3498db55',
+              borderColor: '#3498db',
+              borderWidth: 1.5,
+              borderRadius: 3,
+              yAxisID: 'y',
+              spanGaps: true
+            },
+            {
+              type: 'line',
+              label: 'ฝน',
+              data: s.history.rain,
+              borderColor: '#1abc9c',
+              backgroundColor: 'transparent',
+              borderWidth: 2,
+              pointRadius: 2,
+              yAxisID: 'y1',
+              spanGaps: true,
+              tension: 0.4
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          animation: { duration: 300 },
+          plugins: {
+            legend: {
+              display: true,
+              labels: { color: '#64748b', font: { size: 9 }, boxWidth: 10 }
+            }
+          },
+          scales: {
+            x: { ticks: { color: 'var(--text-secondary)', font: { size: 9 } }, grid: { display: false } },
+            y: {
+              position: 'left',
+              ticks: { color: 'var(--primary-color)', font: { size: 9 } },
+              grid: { color: '#f5f5f5' }
+            },
+            y1: {
+              position: 'right',
+              ticks: { color: 'var(--success-color)', font: { size: 9 } },
+              grid: { display: false }
+            }
+          }
+        }
+      });
+    }
+
+    function toggleSearchCollapse() {
+      const box = document.getElementById('search-box');
+      const icon = document.getElementById('fold-icon');
+      box.classList.toggle('collapsed');
+
+      if (box.classList.contains('collapsed')) {
+        // Unfold icon
+        icon.innerHTML = '<path d="M408 442h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8zm-8 204c0 4.4 3.6 8 8 8h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56zm504-486H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zm0 632H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zM460 505.1L303.7 382c-5.8-4.6-14.4-.5-14.4 6.9v246.2c0 7.4 8.5 11.5 14.4 6.9L460 518.9a8.74 8.74 0 000-13.8z"></path>';
+      } else {
+        // Fold icon
+        icon.innerHTML = '<path d="M408 442h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8zm-8 204c0 4.4 3.6 8 8 8h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56zm504-486H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zm0 632H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zM115.4 518.9L271.7 642c5.8 4.6 14.4.5 14.4-6.9V388.9c0-7.4-8.5-11.5-14.4-6.9L115.4 505.1a8.74 8.74 0 000 13.8z"></path>';
+      }
+    }
+
+    function closeDetail() {
+      document.getElementById('right-panel').classList.remove('open');
+      selectedId = null;
+      if (map) setTimeout(() => map.invalidateSize(), 350);
+    }
+
+    // ============================================================
+    //  NAV VIEW TOGGLE
+    // ============================================================
+    function setView(v) {
+      document.querySelectorAll('.nav-btn').forEach((b, i) => {
+        b.classList.toggle('active', ['map', 'table', 'graph'][i] === v);
+      });
+      // For full implementation, switch main content; currently map only
+    }
+
+    // ============================================================
+    //  RANDOMIZE POSITIONS & DATA every 60s
+    // ============================================================
+    function randomizePositions() {
+      STATIONS.forEach(s => {
+        const b = REGION_BOUNDS[s.region];
+        const data = REGION_DATA[s.region];
+
+        if (b && data) {
+          // 1. Random Location
+          s.lat = b.minLat + Math.random() * (b.maxLat - b.minLat);
+          s.lon = b.minLon + Math.random() * (b.maxLon - b.minLon);
+
+          // 2. Random Identity
+          s.province = data.provinces[Math.floor(Math.random() * data.provinces.length)];
+          const river = data.rivers[Math.floor(Math.random() * data.rivers.length)];
+          s.name = `สถานีวัดน้ำ ${s.province} (${river})`;
+
+          // 3. Random Values
+          s.waterLevel = +(Math.random() * s.bankLevel).toFixed(2);
+          s.rain = +(Math.random() * 40).toFixed(1);
+          s.flow = +(Math.random() * 1500).toFixed(1);
+
+          // 4. Update Status based on Water Level
+          const ratio = s.waterLevel / s.bankLevel;
+          s.status = ratio > 0.9 ? 'critical' : ratio > 0.7 ? 'warning' : 'normal';
+
+          // 5. Update Map Marker
+          if (markers[s.id]) {
+            markers[s.id].setLatLng([s.lat, s.lon]);
+            markers[s.id].bindPopup(buildPopup(s));
+
+            // Update Marker Visuals (color & pulse class)
+            const color = STATUS_COLOR[s.status];
+            const pulseClass = s.status === 'normal' ? 'none' : s.status;
+            const iconHTML = `
+              <div class="pulse-${pulseClass}" 
+                   style="background:${color}; 
+                          width:24px; height:24px; border-radius:50%; 
+                          border:2px solid #fff; box-shadow:var(--shadow-sm);
+                          display:flex; align-items:center; justify-content:center;
+                          color:#fff; font-size:8px; font-weight:700;">
+                ${s.id.slice(-2)}
+              </div>`;
+
+            markers[s.id].setIcon(L.divIcon({
+              className: 'custom-marker',
+              html: iconHTML,
+              iconSize: [24, 24],
+              iconAnchor: [12, 12]
+            }));
+          }
+        }
+      });
+
+      // Update detail panel if active
+      if (selectedId) {
+        const s = STATIONS.find(x => x.id === selectedId);
+        if (s) openDetail(s);
+      }
+      updateStatusBar();
+    }
+
+    setInterval(randomizePositions, 60000);
+
+    // ============================================================
+    //  SIMULATE LIVE DATA UPDATE every 30s
+    // ============================================================
+    setInterval(() => {
+      STATIONS.forEach(s => {
+        if (s.status === 'offline') return;
+        const delta = (Math.random() - 0.45) * 0.05;
+        if (s.waterLevel !== null) {
+          s.waterLevel = Math.max(0.5, +(s.waterLevel + delta).toFixed(2));
+          // shift history
+          s.history.water.shift();
+          s.history.water.push(s.waterLevel);
+        }
+        const rainDelta = (Math.random() - 0.5) * 2;
+        if (s.rain !== null) {
+          s.rain = Math.max(0, +(s.rain + rainDelta).toFixed(1));
+          s.history.rain.shift();
+          s.history.rain.push(s.rain);
+        }
+        // update time label
+        const last = s.history.labels[s.history.labels.length - 1];
+        const [h, m] = last.split(':').map(Number);
+        const next = new Date(0, 0, 0, h, m + 10);
+        s.history.labels.shift();
+        s.history.labels.push(next.getHours().toString().padStart(2, '0') + ':' + next.getMinutes().toString().padStart(2, '0'));
+      });
+
+      updateStatusBar();
+      if (selectedId) {
+        const s = STATIONS.find(x => x.id === selectedId);
+        if (s) { openDetail(s); }
+      }
+      setLastUpdate();
+    }, 30000);
+  </script>
+</body>
+
+</html>

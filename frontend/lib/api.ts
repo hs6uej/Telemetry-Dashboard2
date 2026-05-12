@@ -1,0 +1,60 @@
+const BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api'
+
+function getToken(): string | null {
+  if (typeof window === 'undefined') return null
+  return localStorage.getItem('access_token')
+}
+
+async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
+  const token = getToken()
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    ...(options.headers as Record<string, string>),
+  }
+  if (token) headers['Authorization'] = `Bearer ${token}`
+
+  const res = await fetch(`${BASE}${path}`, { ...options, headers })
+  if (res.status === 401) {
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('access_token')
+      window.location.href = '/login'
+    }
+    throw new Error('Unauthorized')
+  }
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err.message || `HTTP ${res.status}`)
+  }
+  return res.json()
+}
+
+export const api = {
+  auth: {
+    login: (username: string, password: string) =>
+      request<{ access_token: string; user: { id: number; username: string; role: string } }>(
+        '/auth/login', { method: 'POST', body: JSON.stringify({ username, password }) },
+      ),
+    me: () => request('/auth/me'),
+  },
+  stations: {
+    list: () => request<any[]>('/stations'),
+    get: (id: number) => request<any>(`/stations/${id}`),
+    create: (data: any) => request('/stations', { method: 'POST', body: JSON.stringify(data) }),
+    update: (id: number, data: any) => request(`/stations/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    delete: (id: number) => request(`/stations/${id}`, { method: 'DELETE' }),
+  },
+  readings: {
+    latest: () => request<any[]>('/readings/latest'),
+    get: (stationId: number, hours = 24) => request<any[]>(`/stations/${stationId}/readings?hours=${hours}`),
+    add: (stationId: number, data: any) =>
+      request(`/stations/${stationId}/readings`, { method: 'POST', body: JSON.stringify(data) }),
+  },
+  users: {
+    list: () => request<any[]>('/users'),
+    create: (data: any) => request('/users', { method: 'POST', body: JSON.stringify(data) }),
+    update: (id: number, data: any) => request(`/users/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    delete: (id: number) => request(`/users/${id}`, { method: 'DELETE' }),
+    approve: (id: number) => request(`/users/${id}/approve`, { method: 'POST' }),
+    logs: () => request<any[]>('/users/logs'),
+  },
+}
