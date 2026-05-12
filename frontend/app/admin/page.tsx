@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type ReactNode, type CSSProperties } from 'react'
 import { useRouter } from 'next/navigation'
 import { api } from '@/lib/api'
 
@@ -347,7 +347,7 @@ export default function AdminPage() {
 }
 
 // ---- Sub-components ----
-function Card({ title, action, children }: any) {
+function Card({ title, action, children }: { title: string; action?: ReactNode; children: ReactNode }) {
   return (
     <div style={{ background: '#fff', borderRadius: 16, boxShadow: '0 4px 6px -1px rgba(0,0,0,.1)', marginBottom: 24, overflow: 'hidden' }}>
       <div style={{ padding: '20px 24px', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -359,12 +359,12 @@ function Card({ title, action, children }: any) {
   )
 }
 
-function Table({ headers, children }: any) {
+function Table({ headers, children }: { headers: string[]; children: ReactNode }) {
   return (
     <table style={{ width: '100%', borderCollapse: 'collapse' }}>
       <thead>
         <tr>
-          {headers.map((h: string) => (
+          {headers.map(h => (
             <th key={h} style={{ background: '#f8fafc', borderBottom: '2px solid #f1f5f9', color: '#64748b', fontWeight: 600, textTransform: 'uppercase', fontSize: 11, letterSpacing: '.025em', padding: '12px 20px', textAlign: 'left' }}>{h}</th>
           ))}
         </tr>
@@ -374,24 +374,26 @@ function Table({ headers, children }: any) {
   )
 }
 
-function Td({ children, align = 'left' }: any) {
-  return <td style={{ padding: '14px 20px', verticalAlign: 'middle', textAlign: align as any, fontSize: 14 }}>{children}</td>
+function Td({ children, align = 'left' }: { children: ReactNode; align?: 'left' | 'right' | 'center' }) {
+  return <td style={{ padding: '14px 20px', verticalAlign: 'middle', textAlign: align, fontSize: 14 }}>{children}</td>
 }
 
-function Btn({ children, onClick }: any) {
+function Btn({ children, onClick }: { children: ReactNode; onClick: () => void }) {
   return <button onClick={onClick} style={{ background: '#1e3a8a', color: '#fff', border: 'none', padding: '8px 16px', borderRadius: 10, cursor: 'pointer', fontSize: 13, fontWeight: 500, fontFamily: 'Kanit, Sarabun, sans-serif' }}>{children}</button>
 }
 
-function IconBtn({ children, onClick, title }: any) {
+function IconBtn({ children, onClick, title }: { children: ReactNode; onClick: () => void; title?: string }) {
   return <button onClick={onClick} title={title} style={{ background: '#f8fafc', border: '1px solid #f1f5f9', borderRadius: 8, padding: '5px 10px', cursor: 'pointer', marginLeft: 4, fontSize: 14 }}>{children}</button>
 }
 
-function StatusBadge({ status }: any) {
+function StatusBadge({ status }: { status: string }) {
   const color = STATUS_BADGE[status] || '#bfbfbf'
   return <span style={{ background: color + '22', color, border: `1px solid ${color}44`, borderRadius: 8, padding: '3px 10px', fontSize: 12, fontWeight: 600 }}>{STATUS_LABEL[status] || status}</span>
 }
 
-function Field({ label, value, onChange, type = 'text', required }: any) {
+function Field({ label, value, onChange, type = 'text', required }: {
+  label: string; value: string | number | undefined; onChange: (v: string) => void; type?: string; required?: boolean
+}) {
   return (
     <div>
       <label style={labelStyle}>{label}{required && <span style={{ color: '#dc2626' }}> *</span>}</label>
@@ -401,10 +403,10 @@ function Field({ label, value, onChange, type = 'text', required }: any) {
   )
 }
 
-const labelStyle: React.CSSProperties = { display: 'block', fontSize: 13, fontWeight: 500, color: '#374151', marginBottom: 6 }
-const inputStyle: React.CSSProperties = { width: '100%', padding: '10px 14px', border: '1px solid #e2e8f0', borderRadius: 10, fontSize: 14, fontFamily: 'Kanit, Sarabun, sans-serif', boxSizing: 'border-box', outline: 'none' }
+const labelStyle: CSSProperties = { display: 'block', fontSize: 13, fontWeight: 500, color: '#374151', marginBottom: 6 }
+const inputStyle: CSSProperties = { width: '100%', padding: '10px 14px', border: '1px solid #e2e8f0', borderRadius: 10, fontSize: 14, fontFamily: 'Kanit, Sarabun, sans-serif', boxSizing: 'border-box', outline: 'none' }
 
-function navBtn(variant: 'light' | 'outline'): React.CSSProperties {
+function navBtn(variant: 'light' | 'outline'): CSSProperties {
   return {
     padding: '6px 14px', borderRadius: 8, cursor: 'pointer', fontSize: 13, fontWeight: 500,
     fontFamily: 'Kanit, Sarabun, sans-serif',

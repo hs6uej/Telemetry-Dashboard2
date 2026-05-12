@@ -8,6 +8,7 @@ import VectorLayer from 'ol/layer/Vector'
 import VectorSource from 'ol/source/Vector'
 import Feature from 'ol/Feature'
 import OLPoint from 'ol/geom/Point'
+import type Geometry from 'ol/geom/Geometry'
 import Style from 'ol/style/Style'
 import CircleStyle from 'ol/style/Circle'
 import Fill from 'ol/style/Fill'
@@ -41,9 +42,9 @@ function makeStyle(st: Station) {
   })
 }
 
-function buildFeatures(list: Station[]) {
+function buildFeatures(list: Station[]): Feature<Geometry>[] {
   return list.map(st => {
-    const f = new Feature({ geometry: new OLPoint(fromLonLat([st.lng, st.lat])), station: st })
+    const f = new Feature<Geometry>({ geometry: new OLPoint(fromLonLat([st.lng, st.lat])), station: st })
     f.setId(st.id)
     f.setStyle(makeStyle(st))
     return f
